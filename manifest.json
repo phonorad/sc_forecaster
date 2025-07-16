@@ -1,11 +1,6 @@
 {
   "version": "1.0.1",
   "files": {
-    "main_app.py": {
-      "path": "main_app.py",
-      "sha256": "3a411a034dc836ece289b8f83926c7ac94dc89e1d18d74df39d34e9f11adf386",
-      "size": 94914
-    },
     "lib/ssd1306.py": {
       "path": "lib/ssd1306.py",
       "sha256": "156dcec110abede4b36eefb5667b787240f662e8ec173b3414854398afb9b5df",
