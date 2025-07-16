@@ -3,7 +3,7 @@
   "files": {
     "lib/ssd1306.py": {
       "path": "lib/ssd1306.py",
-      "sha256": "156dcec110abede4b36eefb5667b787240f662e8ec173b3414854398afb9b5df",
+      "sha256": "156dcec110abede4b36eefb5667b787240f662e8ec173b3414854398afb9b5dd",
       "size": 4946
     }
   }
