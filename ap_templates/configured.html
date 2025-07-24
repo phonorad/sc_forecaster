@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sage & Circuit Forecaster</title>
+        <style>
+          body {
+              background-color: #e9f5d0;
+              font-family: system-ui, sans-serif;
+              color: #000;
+              padding: 20px;
+              margin: 0;
+          }
+          h1 {
+              font-size: 1.5em;
+              margin-bottom: 0.5em;
+          }
+          p {
+              margin: 0.5em 0;
+              font-size: 1em;
+          }
+        </style>
+    </head>
+    <body>
+        <h1>Exiting Settings and Restarting</h1>
+        <p>The device will now restart</p>
+        <p>It will use the new settings if 'Save and Exit' clicked</p>
+        <p>It will use the old settings if 'Exit without Saving' clicked</p>
+        <p>If it does not restart on its own, try cycling power</p>
+        
+        <script>
+          setTimeout(() => {
+            fetch("/reboot", { method: "POST" });
+          }, 2000);
+        </script>
+    </body>
+</html>
