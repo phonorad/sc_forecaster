@@ -13,7 +13,7 @@
     },
     "ap_templates/config_settings.html": {
       "path": "ap_templates/config_settings.html",
-      "sha256": "7e2973a4ce06623431ee9d3d04b0b2fe97b3be9ccd95689f6b0b0dc5b7a325d8",
+      "sha256": "7e2973a4ce06623431ee9d3d04b0b2fe97b3be9ccd35689f6b0b0dc5b7a325d8",
       "size": 28112
     },
     "ap_templates/redirect.html": {
@@ -33,7 +33,7 @@
     },
     "icons/clear_night_rgb565.raw": {
       "path": "icons/clear_night_rgb565.raw",
-      "sha256": "27b191ed8e62484ce58a7d2719e654c77b8866441bed9ab93bcbe6e49df01363",
+      "sha256": "27b191ed8e62484ce58a7d2719e654877b8866441bed9ab93bcbe6e49df01363",
       "size": 8192
     },
     "icons/cloudy_rgb565.raw": {
