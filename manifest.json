@@ -1,10 +1,200 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.0",
   "files": {
-    "lib/ssd1306.py": {
-      "path": "lib/ssd1306.py",
-      "sha256": "156dcec110abede4b36eefb5667b787240f662e8ec173b3414854398afb9b5df",
-      "size": 4946
+    "main_app.py": {
+      "path": "main_app.py",
+      "sha256": "833b865d077c5e1c923279a4321361831474f9d64fed5ebec47ce78a320d2cfa",
+      "size": 99279
+    },
+    "ap_templates/configured.html": {
+      "path": "ap_templates/configured.html",
+      "sha256": "641aa6ba5d15ba306e07b666f7ccb501fb4b9d8924774f20362c566d29daad0e",
+      "size": 1107
+    },
+    "ap_templates/config_settings.html": {
+      "path": "ap_templates/config_settings.html",
+      "sha256": "7e2973a4ce06623431ee9d3d04b0b2fe97b3be9ccd95689f6b0b0dc5b7a325d8",
+      "size": 28112
+    },
+    "ap_templates/redirect.html": {
+      "path": "ap_templates/redirect.html",
+      "sha256": "41447297997b2a9fc1965616e766e14b70860ea846752ae4d395d28a03bbefe7",
+      "size": 303
+    },
+    "ap_templates/update_complete.html": {
+      "path": "ap_templates/update_complete.html",
+      "sha256": "b85cfafae57b5d45a3abeaba7ac5b1781161024e9f63eedc2cc0d94dcd6cdc6b",
+      "size": 857
+    },
+    "icons/clear_day_rgb565.raw": {
+      "path": "icons/clear_day_rgb565.raw",
+      "sha256": "1664aed803fe35de5e018a455f9f81a393aa0ffb9091ca0e6c79dd02a026d44b",
+      "size": 8192
+    },
+    "icons/clear_night_rgb565.raw": {
+      "path": "icons/clear_night_rgb565.raw",
+      "sha256": "27b191ed8e62484ce58a7d2719e654c77b8866441bed9ab93bcbe6e49df01363",
+      "size": 8192
+    },
+    "icons/cloudy_rgb565.raw": {
+      "path": "icons/cloudy_rgb565.raw",
+      "sha256": "e7801eb1603f11c7368faafaf952a64a45182c2b381ea994f181d4a3c99e3cfb",
+      "size": 8192
+    },
+    "icons/flood_rgb565.raw": {
+      "path": "icons/flood_rgb565.raw",
+      "sha256": "3ae8a98a8d12d3f2a38000045da64b7d6b089908f6f3b2a2401a8906c972fc5a",
+      "size": 8192
+    },
+    "icons/fog_rgb565.raw": {
+      "path": "icons/fog_rgb565.raw",
+      "sha256": "881e046a57b682c98010bd338a037f3f3ce495bd19e28a8869fe6ffe3fdf23ab",
+      "size": 8192
+    },
+    "icons/hail_rgb565.raw": {
+      "path": "icons/hail_rgb565.raw",
+      "sha256": "c5a6599013eb5004a903dfd2c20b6d619889d4fcf734f54628b396f00ebd2886",
+      "size": 8192
+    },
+    "icons/hurricane_rgb565.raw": {
+      "path": "icons/hurricane_rgb565.raw",
+      "sha256": "b7527912ae1a82cd1601d00252eb2be934feb133fab6ec317a1d0cd3e41bc3b5",
+      "size": 8192
+    },
+    "icons/most_cloudy_day_rgb565.raw": {
+      "path": "icons/most_cloudy_day_rgb565.raw",
+      "sha256": "ca301438184e3f5770801b4c0a65c980be2406d9867ee90f3a334b9eaa0cd4e2",
+      "size": 8192
+    },
+    "icons/most_cloudy_night_rgb565.raw": {
+      "path": "icons/most_cloudy_night_rgb565.raw",
+      "sha256": "8d7de2249120884a010a7195d122ae0f55a3f35d2f8f56c948fbf76adbb58aae",
+      "size": 8192
+    },
+    "icons/no_icon_match_rgb565.raw": {
+      "path": "icons/no_icon_match_rgb565.raw",
+      "sha256": "ff17482be629bb839102af16aff2b9679179d64f8a85488666582df9366eebf9",
+      "size": 8192
+    },
+    "icons/part_cloudy_day_rgb565.raw": {
+      "path": "icons/part_cloudy_day_rgb565.raw",
+      "sha256": "35f1be80d6970c55a7386c831c61c745acd56c85e9c2632849c4ee524d1a2504",
+      "size": 8192
+    },
+    "icons/part_cloudy_night_rgb565.raw": {
+      "path": "icons/part_cloudy_night_rgb565.raw",
+      "sha256": "d724bacfee6bcf9a56b9297cb9614602aef87aa20e45303ef8ba65f85a431e28",
+      "size": 8192
+    },
+    "icons/rain_rgb565.raw": {
+      "path": "icons/rain_rgb565.raw",
+      "sha256": "e8603603236ae6dee01d4f20de9e27095e2c60c67448017a871cbd58b7cc9001",
+      "size": 8192
+    },
+    "icons/sand_rgb565.raw": {
+      "path": "icons/sand_rgb565.raw",
+      "sha256": "af9d4a95fde90e453e113ef760c74eb7c67fa841b063732c0c568296c88eee50",
+      "size": 8192
+    },
+    "icons/sc_logo_sparse.raw": {
+      "path": "icons/sc_logo_sparse.raw",
+      "sha256": "85935157c75ec5e86a1cc750b07d9b5b8b33b1cd6b699ea32e7403db77473295",
+      "size": 48075
+    },
+    "icons/smoke_rgb565.raw": {
+      "path": "icons/smoke_rgb565.raw",
+      "sha256": "17a373785281c4c7bdbd0b65e52326f8291420b2b0593aaa4d39fd760037be54",
+      "size": 8192
+    },
+    "icons/snow_rgb565.raw": {
+      "path": "icons/snow_rgb565.raw",
+      "sha256": "7d83e0ba569fd82995241324e4ce5029e37b26858ade8c2334da8e0ab73aef68",
+      "size": 8192
+    },
+    "icons/sunrise_rgb565.raw": {
+      "path": "icons/sunrise_rgb565.raw",
+      "sha256": "96bebb91af83fbd77afbc64f943d2b0b2f0cebd1531124a3a0f2c4da15d31356",
+      "size": 4608
+    },
+    "icons/sunset_rgb565.raw": {
+      "path": "icons/sunset_rgb565.raw",
+      "sha256": "f03b2cf58bf9a897ecb82db7265c2d7bd3d67978e5fd2e80979d125b562c3b96",
+      "size": 4608
+    },
+    "icons/tornado_rgb565.raw": {
+      "path": "icons/tornado_rgb565.raw",
+      "sha256": "aeb99d511835a33b47c3dd7131dc9f7ec10c8d96005e62fb8b0d117bbb8e870f",
+      "size": 8192
+    },
+    "icons/trop_storm_rgb565.raw": {
+      "path": "icons/trop_storm_rgb565.raw",
+      "sha256": "bc342b6d32aef46ed3d73a3e2b676c8850abf783350865f7405f6e72fa47a234",
+      "size": 8192
+    },
+    "icons/tstorm_rgb565.raw": {
+      "path": "icons/tstorm_rgb565.raw",
+      "sha256": "e28ab96e9880c15ad4bc333a011d5d6f5c3a5ff7a2f747c7f34a4d9b66ebf69a",
+      "size": 8192
+    },
+    "icons/windy_rgb565.raw": {
+      "path": "icons/windy_rgb565.raw",
+      "sha256": "12fee824029a315af8aa75131021f1137826939c6b3d168e1a0585a00a9231d7",
+      "size": 8192
+    },
+    "icons/winter_storm_rgb565.raw": {
+      "path": "icons/winter_storm_rgb565.raw",
+      "sha256": "628016b5aa860554bbf3f759a8d2f3db50eb8cb22bc7848886aa090dc2fc8837",
+      "size": 8192
+    },
+    "lib/gc9a01py.py": {
+      "path": "lib/gc9a01py.py",
+      "sha256": "75c994ca91104fddb7f8f5c533c0c969d74f698c4dd124c7b856e88fae5f0cf0",
+      "size": 36970
+    },
+    "lib/vga1_16x16.py": {
+      "path": "lib/vga1_16x16.py",
+      "sha256": "2c8357b2ac1300dd09a50322ae17d829535332484ba4337626f66c49ac022378",
+      "size": 12953
+    },
+    "lib/vga1_16x32.py": {
+      "path": "lib/vga1_16x32.py",
+      "sha256": "06fc860bca2bc0e5ec7cb3bbb4c412912ed5ffc9ab6742155b1f95362ec72ca8",
+      "size": 25241
+    },
+    "lib/vga1_8x16.py": {
+      "path": "lib/vga1_8x16.py",
+      "sha256": "70e0d0f77805b1c059146af1334d5fb2047304d3711b9940cbce63b7320a8740",
+      "size": 6843
+    },
+    "lib/vga1_8x8.py": {
+      "path": "lib/vga1_8x8.py",
+      "sha256": "0091d5b08fd487ddf070a08e7d995a1abe35f44d9e9744310206838c10a623fb",
+      "size": 3769
+    },
+    "phew/dns.py": {
+      "path": "phew/dns.py",
+      "sha256": "a1b66fda0057a5ee586024b793a1a1203b71996f62815d89f086361995b0efd4",
+      "size": 1357
+    },
+    "phew/logging.py": {
+      "path": "phew/logging.py",
+      "sha256": "c2f091af2f9de674bc648cb6abf72fbe34f3bd400c7da4d795ce8c766bff19b1",
+      "size": 3108
+    },
+    "phew/server.py": {
+      "path": "phew/server.py",
+      "sha256": "16150e382f23d93bf8e4887c2309953c1653707ab1d8f79a1bb5b555da423ba3",
+      "size": 17530
+    },
+    "phew/template.py": {
+      "path": "phew/template.py",
+      "sha256": "3507bbe0fa78eeb2e00b428e98859b0b1d80e7e9521ba1e9083da4ab2057d46e",
+      "size": 2309
+    },
+    "phew/__init__.py": {
+      "path": "phew/__init__.py",
+      "sha256": "40b53231c3853ae89271bfc42b23728146cba5c7cd4089ab6c9712462ef4846f",
+      "size": 2092
     }
   }
 }

@@ -19,6 +19,7 @@ import os
 import ure  # MicroPython’s regex module
 import _thread
 import framebuf
+import binascii
 
 # Imports for round color tft display
 import gc9a01py as gc9a01
@@ -27,7 +28,7 @@ import vga1_16x16 as font_lg
 import vga1_16x32 as font_huge
 
 # === Software Version ===
-__version__ = "1.0.1"
+__version__ = "1.0.0"
 # ========================
 
 # === Definitons for Wifi Setup and Access ===
@@ -296,33 +297,6 @@ def setup_mode():
         
         # setup_mode=True means show WiFi fields, hide software update
         return serve_config_page(setup_mode=True)
-
-#    def ap_configure(request):
-#        print("Saving wifi, location and timezone settings...")
-
-#        with open(SETTINGS_FILE, "w") as f:
-#            json.dump(request.form, f)
-            
-#        display.fill(color565(0, 0, 0))
-#        center_lgtext("Settings", 60, color565(0, 255, 0))
-#        center_lgtext("Saved!", 80, color565(0, 255, 0))
-#        center_smtext("Restarting...", 120)
-            
-
-#        # Define a generator response so we can delay and reset after sending the page
-#        def response_gen():
-#            # Yield HTML content to the browser using a generator
-#            yield from render_template(f"{AP_TEMPLATE_PATH}/configured.html")
-    
-#            # Flush and pause to the display updates
-#            time.sleep(2)
-    
-#            # Reboot the device (this line will only run after page is fully sent)
-#            print("Settings save, rebooting now...")
-#            machine.reset()
-
-#        # Return the generator to the server — Phew will stream the response
-#        return response_gen()
     
     def load_settings():
         try:
@@ -347,6 +321,20 @@ def setup_mode():
     def settings_post_handler(request):
         try:
             form = request.form
+            discard = form.get("discard_changes", "false").lower() == "true"
+
+            if discard:
+                print("[Settings] Discarding changes, rebooting without saving")
+
+                # OLED feedback
+                display.fill(color565(0, 0, 0))
+                center_lgtext("Settings", 60, color565(255, 0, 0))  # red text for discard
+                center_lgtext("Not Updated", 80, color565(255, 0, 0))
+                center_smtext("Restarting...", 120)
+
+                # Return page with JS to trigger reboot
+                return render_template(f"{AP_TEMPLATE_PATH}/configured.html")
+
             current_settings = load_settings()
             current_settings.update({
                 "location_source": form.get("location_source", "zip"),
@@ -369,15 +357,22 @@ def setup_mode():
             center_lgtext("Saved!", 80, color565(0, 255, 0))
             center_smtext("Restarting...", 120)
 
-            def response_gen():
-                yield from render_template(f"{AP_TEMPLATE_PATH}/configured.html")
-                time.sleep(2)
-                machine.reset()
-
-            return response_gen()
+            # Return the configured page, reboot done in html code
+            return render_template(f"{AP_TEMPLATE_PATH}/configured.html")
 
         except Exception as e:
             return Response(f"Failed to save settings: {e}", status=500)
+        
+    def reboot_handler(request):
+        print("[REBOOT] Scheduled...")
+        
+        async def delayed_reboot():
+            await uasyncio.sleep(0.1)  # Allow response to flush
+            print("[REBOOT] Executing...")
+            machine.reset()
+                
+        uasyncio.create_task(delayed_reboot())
+        return Response("Rebooting...", status=200)
     
     def ap_catch_all(request):
         if request.headers.get("host") != AP_DOMAIN:
@@ -386,9 +381,10 @@ def setup_mode():
         return "Not found.", 404
 
     server.add_route("/", handler = ap_index, methods = ["GET"])
-#    server.add_route("/configure", handler = ap_configure, methods = ["POST"])
     server.add_route("/settings", handler=settings_get_handler, methods=["GET"])
     server.add_route("/settings", handler=settings_post_handler, methods=["POST"])
+#    server.add_route("/exit_no_save", handler=exit_no_save_handler, methods=["GET", "POST"])
+    server.add_route("/reboot", reboot_handler, methods=["POST"])
     server.set_callback(ap_catch_all)
 
     ap = access_point(AP_NAME)
@@ -404,11 +400,12 @@ def start_update_mode():
     print(f"start_update_mode: got IP = {ip}")
     
     display.fill(color565(0, 0, 0))
-    center_lgtext("Software",60,color565(0, 255, 0))
-    center_lgtext("Update Mode",80,color565(0, 255, 0))
-    center_smtext("Enter", 100)
-    center_smtext(f"http://{ip}", 120,color565(255, 255, 0))
-    center_smtext("into browser", 140)
+    center_lgtext("Settings &",60,color565(0,255,0))
+    center_lgtext("Software",80,color565(0, 255, 0))
+    center_lgtext("Update Mode",100,color565(0, 255, 0))
+    center_smtext("Enter", 120)
+    center_smtext(f"http://{ip}", 140,color565(255, 255, 0))
+    center_smtext("into browser", 160)
 
     def ap_version(request):
         # Return the version defined in main.py
@@ -423,13 +420,19 @@ def start_update_mode():
     
     async def checksums_handler(request):
         nonlocal expected_checksums
-        
+        print("[CHECKSUMS] Request headers:", request.headers)
+        print("[CHECKSUMS] request._reader =", getattr(request, "_reader", None))
+        print("[CHECKSUMS] request._streaming =", getattr(request, "_streaming", None))
         try:
-            body = await request.read()
-            expected_checksums = json.loads(body)
+            expected_checksums = request.data
+            print("[CHECKSUMS] Parsed successfully")
             print("[CHECKSUMS] expected_checksums keys:", list(expected_checksums.keys()))
+            for path, sha in expected_checksums.items():
+                print(f"  - {path}: {sha[:8]}...")    
             return Response("Checksums received", status=200)
+        
         except Exception as e:
+            print(f"[CHECKSUMS] Exception: {e}")
             return Response(f"Error reading checksums: {e}", status=400)
 
     async def finalize_handler(request):
@@ -444,6 +447,7 @@ def start_update_mode():
         # Validate checksums
         for filename, expected_hash in expected_checksums.items():
             try:
+                print(f"[FINALIZE] Validating {filename}")
                 with open(filename, "rb") as f:
                     sha = hashlib.sha256()
                     while True:
@@ -451,10 +455,16 @@ def start_update_mode():
                         if not chunk:
                             break
                         sha.update(chunk)
-                    actual_hash = sha.hexdigest()
+                    actual_hash = binascii.hexlify(sha.digest()).decode()
+                    print(f"[FINALIZE] Actual:   {actual_hash}")
+                    print(f"[FINALIZE] Expected: {expected_hash}")
                     if actual_hash != expected_hash:
+                        print(f"[FINALIZE] MISMATCH for {filename}")
                         failed.append((filename, "Checksum mismatch"))
+                    else:
+                        print(f"[FINALIZE] Checksum OK for {filename}")
             except Exception as e:
+                print(f"[FINALIZE] ERROR reading {filename}: {e}")
                 failed.append((filename, str(e)))
 
         if failed:
@@ -463,7 +473,8 @@ def start_update_mode():
                     os.remove(filename)
                 except:
                     pass
-            return Response("Update failed:\n" + "\n".join([f"{f}: {reason}" for f, reason in failed]), status=500)
+            return Response("Update failed:\n" + "\n".join(["{}: {}".format(f, reason) for f, reason in failed]), status=500)
+
         
         # Rename all .new files except main_app.py.new
         for filename in expected_checksums:
@@ -486,17 +497,17 @@ def start_update_mode():
                     os.rename(filename, final_name)
                     print(f"Rename OK: {filename} -> {final_name}")
                 except Exception as e:
-                    print(f"Rename failed: {filename} -> {final_name}")
-                    failed.append((filename, f"Rename failed: {e}"))
+                    print(f"[FINALIZE] Error reading {filename}: {repr(e)}")
+                    failed.append((filename, repr(e)))
         if failed:
             for filename in expected_checksums:
                 try:
                     os.remove(filename)
                 except:
-                    pass            
+                    pass
             return Response("Update finalize failed:\n" + "\n".join([f"{f}: {reason}" for f, reason in failed]), status=500)
 
-        # Optional OLED display
+        # OLED display
         display.fill(color565(0, 0, 0))
         center_lgtext("Update", 60, color565(0, 255, 0))
         center_lgtext("Complete!", 80, color565(0, 255, 0))
@@ -505,8 +516,6 @@ def start_update_mode():
         return Response("Update verified and applied", status=200)
 
     def continue_handler(request):
-#        global continue_requested
-#        continue_requested = True
         print("Software updated, OK clicked, restarting device...")
 
         # Display restarting received message    
@@ -514,20 +523,25 @@ def start_update_mode():
         center_lgtext("New Version", 60, color565(0, 255, 0))
         center_lgtext("Saved!", 80, color565(0, 255, 0))
         center_smtext("Restarting device...", 120)
-    
-        return render_template(f"{AP_TEMPLATE_PATH}/update_complete.html")
-#        def response_gen():
-#            yield "OK"
-#            yield from render_template(f"{AP_TEMPLATE_PATH}/update_complete.html")
-#            time.sleep(2)
-#            print("Software update complete. Rebooting now...")
-#            machine.reset()
 
-#         return response_gen()
+        return Response("OK", status=200)
+#        return render_template(f"{AP_TEMPLATE_PATH}/update_complete.html")
     
     def update_complete_handler(request):
         print("Serving update_complete.html")
         return render_template(f"{AP_TEMPLATE_PATH}/update_complete.html")
+    
+    def exit_no_save_handler(request):
+        print("[/exit_no_save] Exit without saving requested - restarting device")
+
+        # OLED feedback
+        display.fill(color565(0, 0, 0))
+        center_lgtext("Settings", 60, color565(255, 0, 0))  # red text to indicate discard
+        center_lgtext("Not Updated", 80, color565(255, 0, 0))
+        center_smtext("Restarting...", 120)
+
+        # Return the page immediately — it has the JS to trigger reboot after delay
+        return render_template(f"{AP_TEMPLATE_PATH}/configured.html")
     
     async def upload_handler(request):
 #        filename = request.query.get("filename")
@@ -569,7 +583,7 @@ def start_update_mode():
                         break
                     f.write(chunk)
                     total_written += len(chunk)
-                    print(f"[UPLOAD] Wrote chunk of {len(chunk)} bytes (total so far: {total_written})")
+#                     print(f"[UPLOAD] Wrote chunk of {len(chunk)} bytes (total so far: {total_written})")
             
             print(f"[UPLOAD] Finished writing {total_written} bytes to {filepath}")
             
@@ -620,6 +634,19 @@ def start_update_mode():
     def settings_post_handler(request):
         try:
             form = request.form
+            discard = form.get("discard_changes", "false").lower() == "true"
+
+            if discard:
+                print("[Settings] Discarding changes, rebooting without saving")
+
+                # OLED feedback
+                display.fill(color565(0, 0, 0))
+                center_lgtext("Settings", 60, color565(255, 0, 0))  # red text for discard
+                center_lgtext("Not Updated", 80, color565(255, 0, 0))
+                center_smtext("Restarting...", 120)
+
+                # Return page with JS to trigger reboot
+                return render_template(f"{AP_TEMPLATE_PATH}/configured.html")
             
             # Load existing settings first
             current_settings = load_settings()
@@ -645,20 +672,21 @@ def start_update_mode():
             center_lgtext("Saved!", 80, color565(0, 255, 0))
             center_smtext("Restarting...", 120)
             
-            def response_gen():
-                yield from render_template(f"{AP_TEMPLATE_PATH}/configured.html")
-                time.sleep(2)
-                print("Settings updated, rebooting now...")
-                machine.reset()
-
-            return response_gen()
+            # Return the page; the JS inside configured.html triggers reboot
+            return render_template(f"{AP_TEMPLATE_PATH}/configured.html")
             
         except Exception as e:
             return Response(f"Failed to save settings: {e}", status=500)
         
     def reboot_handler(request):
-        print("Rebooting now...")
-        machine.reset()
+        print("[REBOOT] Scheduled...")
+        
+        async def delayed_reboot():
+            await uasyncio.sleep(0.1)  # Allow response to flush
+            print("[REBOOT] Executing...")
+            machine.reset()
+                
+        uasyncio.create_task(delayed_reboot())
         return Response("Rebooting...", status=200)
         
     def catch_all_handler(request):
@@ -668,6 +696,7 @@ def start_update_mode():
     server.add_route("/", handler=swup_handler, methods=["GET"])
     server.add_route("/settings", handler=settings_get_handler, methods=["GET"])
     server.add_route("/settings", handler=settings_post_handler, methods=["POST"])
+#    server.add_route("/exit_no_save", handler=exit_no_save_handler, methods=["GET","POST"])
     server.add_route("/version", handler=ap_version, methods=["GET"])
     server.add_route("/favicon.ico", handler=favicon_handler, methods=["GET"])
     server.add_route("/continue", handler=continue_handler, methods=["POST"])
@@ -694,7 +723,7 @@ def setup_sw_handler(pin):
     else:  # Rising edge: button released
         if press_time is not None:
             duration = time.ticks_diff(time.ticks_ms(), press_time)
-            if duration >= 5000:  # 5 seconds
+            if duration >= 2000:  # 2 seconds
                 long_press_triggered = True
                 print("Long press detected!")
                 # Set flag for main loop to poll and to call start_update_mode
@@ -856,42 +885,77 @@ def format_sun_time(t):
     return f"{hour_12}:{minute:02d} {am_pm}"
 
 # === Forecast Icon selection ====
+
 def get_icon_filename(simplified_now, day):
-    
     if not simplified_now:
         simplified_now = "No Forecast"
     f = simplified_now.lower()
     print(f"simplified forecast: {f}")
 
-    icon_filename = None
+    def match_any(terms):
+        return any(term in f for term in terms)
 
-    if "partly sunny" in f or "partly clear" in f or "p sunny" in f or "p clear" in f:
-        icon_filename = "icons/part_cloudy_day_rgb565.raw" if day else "icons/part_cloudy_night_rgb565.raw"
-    elif "mostly sunny" in f or "m sunny" in f or "mostly clear" in f or "m clear" in f:
-        icon_filename = "icons/clear_day_rgb565.raw" if day else "icons/clear_night_rgb565.raw"
-    elif "partly cloudy" in f or "p cloudy" in f:
-        icon_filename = "icons/part_cloudy_day_rgb565.raw" if day else "icons/part_cloudy_night_rgb565.raw"
-    elif "mostly cloudy" in f or "m cloudy" in f:
-        icon_filename = "icons/cloudy_rgb565.raw" if day else "icons/cloudy_rgb565.raw"
-    elif "sun" in f or "clear" in f:
-        # Fallback for simple "sunny" or "clear" without qualifiers
-        icon_filename = "icons/clear_day_rgb565.raw" if day else "icons/clear_night_rgb565.raw"
-    elif "tstorms" in f or "thunderstorm" in f or "thunderstorms" in f or "t-storm" in f:
+    # === Severe Weather ===
+    if match_any(["tornado", "funnel cloud"]):
+        icon_filename = "icons/tornado_rgb565.raw"
+    elif match_any(["hurricane"]):
+        icon_filename = "icons/hurricane_rgb565.raw"
+    elif match_any(["tropical storm"]):
+        icon_filename = "icons/trop_storm_rgb565.raw"
+    elif match_any(["winter storm", "blizzard"]):
+        icon_filename = "icons/winter_storm_rgb565.raw"
+    elif match_any(["thunderstorm", "t-storm", "tstorms", "thunderstorms", "storm", "squall", "lightning"]):
         icon_filename = "icons/tstorm_rgb565.raw"
-    elif "cloud" in f or "overcast" in f:
-        icon_filename = "icons/cloudy_rgb565.raw"
-    elif "rain" in f or "showers" in f or "drizzle" in f:
-         icon_filename = "icons/rain_rgb565.raw"
-    elif "fog" in f or "haze" in f:
-        icon_filename = "icons/fog_rgb565.raw"
-    elif "snow" in f or "flurries" in f or "sleet" in f or "hail" in f:
+
+    # === Winter Weather / Ice / Hail / Frozen Mix ===
+    elif match_any([
+        "snow", "winter weather", "frost"
+    ]):
         icon_filename = "icons/snow_rgb565.raw"
-    elif "wind" in f:
+    elif match_any([
+        "sleet", "hail", "ice", "snow grains", "ice pellets", "ice crystals",
+        "snow pellets", "freezing rain", "freezing drizzle"
+    ]):
+        icon_filename = "icons/hail_rgb565.raw"
+
+    # === Rain and Flooding ===
+    elif match_any(["rain", "showers", "drizzle", "precipitation", "mist", "spray"]):
+        icon_filename = "icons/rain_rgb565.raw"
+    elif match_any(["flash flood", "flood"]):
+        icon_filename = "icons/flood_rgb565.raw"
+
+    # === Obscurants ===
+    elif match_any(["fog"]):
+        icon_filename = "icons/fog_rgb565.raw"
+    elif match_any(["haze", "smoke"]):
+        icon_filename = "icons/smoke_rgb565.raw"
+    elif match_any([
+        "dust", "sand", "volcanic ash", "ash", "dust storm", "sandstorm"
+    ]):
+        icon_filename = "icons/sand_rgb565.raw"
+
+    # === Wind Conditions ===
+    elif match_any(["wind", "windy", "gust", "gusty", "blowing", "drifting"]):
         icon_filename = "icons/windy_rgb565.raw"
-    # If nothing matches, show clear icon (NOTE: CHANGE TO SOMETHING ELSE, smiley, world, etc)
+
+    # === Sky Conditions ===
+    elif match_any(["partly sunny", "partly clear", "p sunny", "p clear"]):
+        icon_filename = "icons/part_cloudy_day_rgb565.raw" if day else "icons/part_cloudy_night_rgb565.raw"
+    elif match_any(["mostly sunny", "m sunny", "mostly clear", "m clear"]):
+        icon_filename = "icons/clear_day_rgb565.raw" if day else "icons/clear_night_rgb565.raw"
+    elif match_any(["partly cloudy", "p cloudy"]):
+        icon_filename = "icons/part_cloudy_day_rgb565.raw" if day else "icons/part_cloudy_night_rgb565.raw"
+    elif match_any(["mostly cloudy", "m cloudy"]):
+        icon_filename = "icons/most_cloudy_day_rgb565.raw" if day else "icons/most_cloudy_night_rgb565.raw"
+    elif match_any(["cloudy", "overcast"]):
+        icon_filename = "icons/cloudy_rgb565.raw"
+    elif match_any(["sun", "clear"]):
+        icon_filename = "icons/clear_day_rgb565.raw" if day else "icons/clear_night_rgb565.raw"
+
+    # === Fallback ===
     else:
-        icon_filename = "icons/smiley_rgb565.raw" if day else "icons/smiley_sleep_rgb565.raw"
-    
+        icon_filename = "icons/no_icon_match_rgb565.raw"
+
     print(f"Icon filename selected: {icon_filename}")
     return icon_filename
 
@@ -1072,7 +1136,8 @@ def draw_sparse_multicolor_grayscale(display, filepath):
     fb = framebuf.FrameBuffer(buf, WIDTH, HEIGHT, framebuf.RGB565)
 
     # Initialize to white (or whatever your background is)
-    white = rgb_to_rgb565(255, 255, 255)
+#    white = rgb_to_rgb565(255, 255, 255)
+    white = rgb_to_rgb565(233, 245, 208)
     for i in range(0, len(buf), 2):
         buf[i] = white >> 8
         buf[i+1] = white & 0xFF
@@ -1926,7 +1991,10 @@ def display_weather(interval, temp, humidity, description, is_daytime=None):
             temp_str = f"{prefix}{t_val}F"
         except:
             temp_str = f"{temp}F" # fallback
-        center_hugetext(temp_str, 175, color565(255, 100, 100))
+        if is_daytime:
+            center_hugetext(temp_str, 175, color565(255, 100, 100))
+        else:
+            center_hugetext(temp_str, 175, color565(144, 213, 255))
         
 def display_then():
     # Blank just the icon area and condition text
@@ -1973,11 +2041,29 @@ def display_sun_times(sunrise, sunset):
     if sunrise and sunset:
         sunrise_str = format_sun_time(sunrise)
         sunset_str = format_sun_time(sunset)
-        
-        center_lgtext("Sunrise:", 80, color565(255, 255, 0))
-        center_hugetext(sunrise_str, 100, color565(255, 255, 0))
-        center_lgtext("Sunset:", 140, color565(255, 160, 0))
-        center_hugetext(sunset_str, 160, color565(255, 160, 0))
+    
+        # Load 64x64 icons
+        with open("/icons/sunrise_rgb565.raw", "rb") as f:
+            sunrise_icon = f.read()
+        with open("/icons/sunset_rgb565.raw", "rb") as f:
+            sunset_icon = f.read()
+      # Sunrise icon
+        display.blit_buffer(sunrise_icon, 20, 70, 48, 48)
+
+        # Sunrise text
+        display.text(font_lg,"Sunrise:", 80, 70, color565(255, 255, 0))
+        display.text(font_huge, sunrise_str, 80, 90, color565(255, 255, 0))
+
+        # Sunset icon
+        display.blit_buffer(sunset_icon, 20, 140, 48, 48)
+
+        # Sunset text
+        display.text(font_lg, "Sunset:", 80, 140, color565(255, 160, 0))
+        display.text(font_huge, sunset_str, 80, 160, color565(255, 160, 0))   
+#        center_lgtext("Sunrise:", 80, color565(255, 255, 0))
+#        center_hugetext(sunrise_str, 100, color565(255, 255, 0))
+#        center_lgtext("Sunset:", 140, color565(255, 160, 0))
+#        center_hugetext(sunset_str, 160, color565(255, 160, 0))
         
 # === Weather Program ===
 def application_mode(settings):
@@ -2191,6 +2277,16 @@ def application_mode(settings):
             if cycle_index == 0:
                 display_sun_times(sunrise, sunset)
                 forecast_phase = -1  # no follow-up phases
+                
+                # Wi-Fi reconnection check
+                if not is_connected_to_wifi():
+                    print("[WiFi] Disconnected. Attempting to reconnect...")
+                    success = connect_to_wifi()
+                    if success:
+                        print("[WiFi] Reconnected successfully.")
+                    else:
+                        print("[WiFi] Reconnection failed.")
+                        
             elif forecasts and (cycle_index - 1) < len(forecasts):
                 forecast = forecasts[cycle_index - 1]
                 forecast_interval = shorten_period_name(forecast.get("name", "Forecast"))
@@ -2232,7 +2328,6 @@ def application_mode(settings):
         # Phase -1: used for sunrise/sunset or N/A display, just wait 10s then reset
         elif forecast_phase == -1 and time.time() - last_forecast_switch >= 10:
             forecast_phase = 0
-#            last_forecast_switch = time.time()
             cycle_index += 1
             if cycle_index >= cycle_length:
                 cycle_index = 0
@@ -2277,7 +2372,7 @@ try:
     
     # See if setup wifi switch is pressed
     if setup_sw.value() == False:
-        t = 50  # Switch must be pressed for 5 seconds to reset wifi config
+        t = 20  # Switch must be pressed for >2 secs on power-up
         while setup_sw.value() == False and t > 0:
             t -= 1
             time.sleep(0.1)
@@ -2291,12 +2386,12 @@ try:
     if status in ("missing", "invalid", "corrupt"):
         # Display reason for error in settings
         display.fill(color565(0, 0, 0))
-        center_lgtext("Settings Error", 60)
-        center_smtext(reason, 80)
-        center_smtext("Entering Setup Mode", 120)
+        center_lgtext("Settings Error", 80, color565(255,0,0))
+        center_smtext(reason, 120)
+        center_smtext("Entering Setup Mode", 140)
         for count in range(5,0, -1):   # Count down from 5 to 1
-            display.fill_rect(0, 140, 240, 16, color565(0, 0, 0))  # Clears 1 text line
-            center_smtext(f"in {count} seconds", 140)
+            display.fill_rect(0, 160, 240, 16, color565(0, 0, 0))  # Clears 1 text line
+            center_smtext(f"in {count} seconds", 160)
             time.sleep(1)
         print(f"Settings status = {status}. Reason: {reason}. Entering setup mode")
         setup_mode()
@@ -2309,7 +2404,7 @@ try:
     # Display Logo
     print("Displaying logo")
 #     display.fill(rgb888_to_rgb565(255, 254, 140))
-    display.fill(rgb888_to_rgb565(255, 255, 255))
+#    display.fill(rgb888_to_rgb565(255, 255, 255))
 
 #    image_path = "/icons/pl_logo_sparse_gryscl.raw"
 #    draw_sparse_1color_grayscale(display, image_path)
