@@ -3,8 +3,8 @@
   "files": {
     "main_app.py": {
       "path": "main_app.py",
-      "sha256": "833b865d077c5e1c923279a4321361831474f9d64fed5ebec47ce78a320d2cfa",
-      "size": 99279
+      "sha256": "b5096f555dd28f9e0b2e0191d7346b47ea6b22698024586bc1f2ca2f2ddc237d",
+      "size": 101613
     },
     "ap_templates/configured.html": {
       "path": "ap_templates/configured.html",
@@ -13,8 +13,8 @@
     },
     "ap_templates/config_settings.html": {
       "path": "ap_templates/config_settings.html",
-      "sha256": "7e2973a4ce06623431ee9d3d04b0b2fe97b3be9ccd35689f6b0b0dc5b7a325d8",
-      "size": 28112
+      "sha256": "409b04b9b720ba9ecd29ca7a607359466697d68e16d2fd3f936368adf746b567",
+      "size": 29531
     },
     "ap_templates/redirect.html": {
       "path": "ap_templates/redirect.html",
@@ -23,8 +23,8 @@
     },
     "ap_templates/update_complete.html": {
       "path": "ap_templates/update_complete.html",
-      "sha256": "b85cfafae57b5d45a3abeaba7ac5b1781161024e9f63eedc2cc0d94dcd6cdc6b",
-      "size": 857
+      "sha256": "7828fd1352f24d4cf0189fedce1fd5e3d3901725b2609349f430b8643483ba7f",
+      "size": 1088
     },
     "icons/clear_day_rgb565.raw": {
       "path": "icons/clear_day_rgb565.raw",
@@ -33,7 +33,7 @@
     },
     "icons/clear_night_rgb565.raw": {
       "path": "icons/clear_night_rgb565.raw",
-      "sha256": "27b191ed8e62484ce58a7d2719e654877b8866441bed9ab93bcbe6e49df01363",
+      "sha256": "27b191ed8e62484ce58a7d2719e654c77b8866441bed9ab93bcbe6e49df01363",
       "size": 8192
     },
     "icons/cloudy_rgb565.raw": {

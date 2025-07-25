@@ -437,7 +437,58 @@ def start_update_mode():
 
     async def finalize_handler(request):
         nonlocal expected_checksums
+        
+        # Recursive function to delete all .new files in root and subdirs
+        def remove_new_files_recursive(dir_path="."):
+            try:
+                entries = os.listdir(dir_path)
+            except Exception as e:
+                print(f"[FINALIZE] Failed to list directory {dir_path}: {e}")
+                return
 
+            for entry in entries:
+                path = f"{dir_path}/{entry}" if dir_path != "." else entry
+                try:
+                    stat = os.stat(path)
+                    mode = stat[0]
+
+                    # Check if directory (MicroPython uses stat[0] & 0x4000 for dir)
+                    if mode & 0x4000:
+                        # It's a directory, recurse
+                        remove_new_files_recursive(path)
+                    else:
+                        # It's a file - delete if endswith .new
+                        if entry.endswith(".new"):
+                            os.remove(path)
+                            print(f"[FINALIZE] Removed {path}")
+                except Exception as e:
+                    print(f"[FINALIZE] Error processing {path}: {e}")
+
+        try:
+            data = request.data
+            print("[FINALIZE] Parsed request.data:", data)
+            # Validate data is dict and contains expected 'status' field
+            if not isinstance(data, dict):
+                return Response("Invalid request format", status=400)
+
+            status = data.get("status")
+            if status not in ("ok", "error"):
+                return Response("Invalid or missing status value", status=400)
+
+        except Exception as e:
+            print(f"[FINALIZE] Failed to parse JSON body: {e}")
+            return Response("Invalid JSON", status=400)
+        
+        print(f"[FINALIZE] Received status: {status}")
+
+        if status == "error":
+            print("[FINALIZE] Update aborted by client, cleaning up...")
+            remove_new_files_recursive(".")   # Remove all .new files recursively
+            expected_checksums.clear()
+            return Response("Update aborted by client, files cleaned up", status=200)
+        
+        # No error, 'OK' received from Broswer, can proceed with checksum check of files
+        print("[FINALIZE] Proceeding with checksum validation...")
         print("[FINALIZE] expected_checksums keys:", list(expected_checksums.keys()))
     
         if not expected_checksums:

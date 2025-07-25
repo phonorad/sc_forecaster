@@ -130,8 +130,10 @@
     }
 
     button:disabled {
-      background: #ddd;
+      background: #ddd;    /* Slightly duller than normal  */
+      color: #666;         /* Dim the text a bit    */
       cursor: not-allowed;
+      opacity: 0.6;        /* Faded appearance    */
     }
 
     /* Responsive adjustments */
@@ -645,6 +647,8 @@
     okContainer.style.display = "none";
     progress.value = 0;
     uploadStatus.innerHTML = "";
+    updateButton.style.display = "none";  // Reset visibility on new check
+    updateButton.disabled = true;        // Reset enabled state
     
     // Disable Check button to prevent repeat clicks
     const checkButton = document.querySelector("button[onclick='checkForUpdate()']");
@@ -667,6 +671,7 @@
         statusDiv.innerText = `You are running the latest version: ${picoVersion}`;
         okContainer.style.display = "block";
         updateButton.style.display = "none";  // Hide update now button
+        updateButton.disabled = true;         // Just in case it was left enabled
       }
       else {
           statusDiv.innerText = `Update available!\nCurrent version: ${picoVersion}\nLatest version: ${githubVersion}`;
@@ -678,6 +683,8 @@
       statusDiv.innerText = "Error checking version: " + err;
       okContainer.style.display = "block";
       document.getElementById("ok-button").disabled = false;
+      updateButton.style.diaply = "none";        // Hide if error occurred
+      updateButton.disabled = true;              // Don't allow update if check failed 
     }
   }
 
@@ -698,6 +705,18 @@
     document.getElementById("upload-status").style.display = "none";
     document.getElementById("upload-status").innerHTML = "";
 
+    async function sendFinalizeStatus(status) {
+      try {
+        await fetch("/finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status })
+        });
+      } catch (e) {
+        console.error("Failed to notify Pico of update status:", e);
+      }
+    }
+    
     try {
       const manifestResponse = await fetch(`${GITHUB_BASE}/manifest.json?nocache=${Date.now()}`);
       const manifest = await manifestResponse.json();
@@ -722,7 +741,9 @@
         
         if (hash !== meta.sha256) {
           appendStatus(`Checksum mismatch for ${path}. Skipping update.`, "red");
+          await sendFinalizeStatus("error");
           statusDiv.innerText = `Checksum mismatch for ${path}. Please try again.`;
+          okButton.disabled = false;         // Allow reboot 
           okContainer.style.display = "block";
           return;
         }
@@ -742,7 +763,9 @@
         const result = await uploadRes.text();
         if (!uploadRes.ok) {
         appendStatus(`Failed to upload ${uploadPath}: ${result}`, "red");
+        await sendFinalizeStatus("error");
         statusDiv.innerText = `Upload failed for ${uploadPath}. \nClick OK to reboot and try again.`;
+        okButton.disabled = false;          // Allow reboot
         okContainer.style.display = "block";
         return;
       }
@@ -764,19 +787,26 @@
       if (!checksumRes.ok) {
         const text = await checksumRes.text();
         appendStatus(`Failed to send checksums: ${text}`, "red");
+        await sendFinalizeStatus("error");
         statusDiv.innerText = `Checksum transfer failed. \n Click OK to reboot and try again.`;
+        okButton.disabled = false;    // Allow reboot
         okContainer.style.display = "block";
         return;
       }
 
       // Finalize the update
       appendStatus(`Finalizing update...`);
-      const finalizeRes = await fetch("/finalize", { method: "POST" });
+      const finalizeRes = await fetch("/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ok" })
+      });
       const finalText = await finalizeRes.text();
 
       if (!finalizeRes.ok) {
         appendStatus(`Finalize failed: ${finalText}`, "red");
         statusDiv.innerText = `Update failed during finalize step.`;
+        okButton.disabled = false;       // Allow reboot
         okContainer.style.display = "block";
         return;
       }
@@ -790,6 +820,7 @@
   } catch (err) {
       appendStatus(`\n Update failed: ${err}`);
       statusDiv.innerText = `Update failed: ${err}`;
+      okButton.disabled = false
       okContainer.style.display = "block";
     }
   }
