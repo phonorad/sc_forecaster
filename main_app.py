@@ -1788,9 +1788,6 @@ def get_weather_data(lat, lon, metadata, headers):
                     print(f"          forecast2_short='{period['forecast2_short']}'")
             print("After extracting forecast periods")
             print_memory_usage()
-
-            print("After freeing raw forecast JSON and running GC:")
-            print_memory_usage()
             
         except Exception as e:
             print("Error fetching or parsing forecast data:", e)
@@ -2332,11 +2329,18 @@ def application_mode(settings):
                 # Wi-Fi reconnection check
                 if not is_connected_to_wifi():
                     print("[WiFi] Disconnected. Attempting to reconnect...")
-                    success = connect_to_wifi()
-                    if success:
+                    center_smtext("WiFi Retry", 210, color565(64, 64, 255))
+                    connect_to_wifi(settings["ssid"], settings["password"])
+                    if is_connected_to_wifi():
                         print("[WiFi] Reconnected successfully.")
+                        display.fill_rect(0, 210, 240, 30, color565(0, 0, 0))
+                        center_smtext("WiFi OK", 210, color565(64, 255, 64))
+                        time.sleep(2)
                     else:
                         print("[WiFi] Reconnection failed.")
+                        display.fill_rect(0, 210, 240, 30, color565(0, 0, 0))
+                        center_smtext("WiFi Fail", 210, color565(255, 64, 64))
+                        time.sleep(2)
                         
             elif forecasts and (cycle_index - 1) < len(forecasts):
                 forecast = forecasts[cycle_index - 1]
